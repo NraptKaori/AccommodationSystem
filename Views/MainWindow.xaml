@@ -1,0 +1,30 @@
+<Window x:Class="AccommodationSystem.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="宿泊税徴収管理・領収書発行システム"
+        WindowState="Maximized"
+        MinWidth="900" MinHeight="650"
+        Background="{StaticResource BackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ヘッダー -->
+        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}">
+            <Grid Margin="20,0">
+                <TextBlock Text="🏨  宿泊税徴収管理・領収書発行システム"
+                           Foreground="White" FontSize="18" FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+                <Button Content="⚙ 管理画面" Style="{StaticResource AccentButton}"
+                        HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Padding="16,8" FontSize="12"
+                        Click="AdminButton_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- メインコンテンツ：チェックイン画面 -->
+        <Frame x:Name="MainFrame" Grid.Row="1" NavigationUIVisibility="Hidden"/>
+    </Grid>
+</Window>

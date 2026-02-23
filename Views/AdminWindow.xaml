@@ -1,0 +1,321 @@
+<Window x:Class="AccommodationSystem.Views.AdminWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="管理画面" Width="1100" Height="750"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}">
+            <TextBlock Text="⚙  管理画面" Foreground="White" FontSize="16" FontWeight="Bold"
+                       VerticalAlignment="Center" Margin="20,0"/>
+        </Border>
+
+        <TabControl Grid.Row="1" Margin="12" Background="Transparent" BorderThickness="0">
+
+            <!-- ① 宿泊者一覧 -->
+            <TabItem Header="宿泊者一覧">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- フィルター -->
+                    <Border Grid.Row="0" Style="{StaticResource CardBorder}" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="ListSearchBox" Grid.Column="0"
+                                     Style="{StaticResource PlaceholderTextBox}" Tag="氏名検索..."
+                                     Margin="0,0,8,0"/>
+                            <ComboBox x:Name="StatusFilter" Grid.Column="1" SelectedIndex="0" FontSize="13">
+                                <ComboBoxItem Content="すべて" Tag="all"/>
+                                <ComboBoxItem Content="未払い" Tag="unpaid"/>
+                                <ComboBoxItem Content="支払済み" Tag="paid"/>
+                            </ComboBox>
+                            <DatePicker x:Name="FromDate" Grid.Column="3" FontSize="12"/>
+                            <DatePicker x:Name="ToDate" Grid.Column="5" FontSize="12"/>
+                            <Button Grid.Column="7" Content="検索"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Click="FilterButton_Click" Padding="10,8"/>
+                            <Button Grid.Column="9" Content="CSV取込"
+                                    Style="{StaticResource AccentButton}"
+                                    Click="ImportButton_Click" Padding="8,8"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- サマリーバー -->
+                    <Border Grid.Row="1" Background="#EBF4FF" CornerRadius="6" Padding="16,10" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="総件数" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock x:Name="SummaryTotal" FontSize="16" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}" Text="0 件"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="支払済み" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock x:Name="SummaryPaid" FontSize="16" FontWeight="Bold"
+                                           Foreground="{StaticResource SuccessBrush}" Text="0 件"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="未払い" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock x:Name="SummaryUnpaid" FontSize="16" FontWeight="Bold"
+                                           Foreground="{StaticResource DangerBrush}" Text="0 件"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3">
+                                <TextBlock Text="徴収済み宿泊税合計" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock x:Name="SummaryTax" FontSize="16" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}" Text="¥0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- DataGrid -->
+                    <DataGrid x:Name="ReservationGrid" Grid.Row="2"
+                              AutoGenerateColumns="False" IsReadOnly="True"
+                              CanUserReorderColumns="False"
+                              AlternatingRowBackground="#F7FAFC" RowBackground="White"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              BorderThickness="1" BorderBrush="#E2E8F0"
+                              SelectionChanged="ReservationGrid_SelectionChanged">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="予約番号" Binding="{Binding ReservationNumber}" Width="140"/>
+                            <DataGridTextColumn Header="宿泊者名" Binding="{Binding GuestName}" Width="*"/>
+                            <DataGridTextColumn Header="チェックイン" Binding="{Binding CheckinDate, StringFormat=yyyy/MM/dd}" Width="110"/>
+                            <DataGridTextColumn Header="チェックアウト" Binding="{Binding CheckoutDate, StringFormat=yyyy/MM/dd}" Width="110"/>
+                            <DataGridTextColumn Header="人数" Binding="{Binding NumPersons}" Width="55"/>
+                            <DataGridTextColumn Header="泊数" Binding="{Binding NumNights}" Width="55"/>
+                            <DataGridTextColumn Header="宿泊税" Binding="{Binding AccommodationTax, StringFormat=\{0:¥#\,##0\}}" Width="90"/>
+                            <DataGridTextColumn Header="決済状態" Binding="{Binding PaymentStatusDisplay}" Width="90"/>
+                            <DataGridTextColumn Header="決済日時" Binding="{Binding PaymentDate, StringFormat=yyyy/MM/dd HH:mm}" Width="130"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ② 月次集計 -->
+            <TabItem Header="月次集計">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,8,0" VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock Text="月次集計 Excel 出力" FontSize="15" FontWeight="Bold"
+                                       Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
+
+                            <TextBlock Text="対象年" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="YearCombo" Margin="0,0,0,12" FontSize="13"/>
+
+                            <TextBlock Text="対象月" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="MonthCombo" Margin="0,0,0,20" FontSize="13">
+                                <ComboBoxItem Content="1月" Tag="1"/>
+                                <ComboBoxItem Content="2月" Tag="2"/>
+                                <ComboBoxItem Content="3月" Tag="3"/>
+                                <ComboBoxItem Content="4月" Tag="4"/>
+                                <ComboBoxItem Content="5月" Tag="5"/>
+                                <ComboBoxItem Content="6月" Tag="6"/>
+                                <ComboBoxItem Content="7月" Tag="7"/>
+                                <ComboBoxItem Content="8月" Tag="8"/>
+                                <ComboBoxItem Content="9月" Tag="9"/>
+                                <ComboBoxItem Content="10月" Tag="10"/>
+                                <ComboBoxItem Content="11月" Tag="11"/>
+                                <ComboBoxItem Content="12月" Tag="12"/>
+                            </ComboBox>
+
+                            <Button Content="📊  プレビュー" Style="{StaticResource PrimaryButton}"
+                                    Margin="0,0,0,8"
+                                    Click="PreviewMonthlyButton_Click"/>
+                            <Button Content="💾  Excel で出力" Style="{StaticResource SuccessButton}"
+                                    Click="ExportExcelButton_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- プレビューパネル -->
+                    <Border Grid.Column="1" Style="{StaticResource CardBorder}" VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock x:Name="PreviewTitle" Text="月を選択してプレビュー" FontSize="15" FontWeight="Bold"
+                                       Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
+                            <Grid x:Name="PreviewGrid" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,16">
+                                    <TextBlock Text="総宿泊件数" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="PvTotalBookings" FontSize="22" FontWeight="Bold"
+                                               Foreground="{StaticResource PrimaryBrush}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,16">
+                                    <TextBlock Text="総宿泊人数" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="PvTotalPersons" FontSize="22" FontWeight="Bold"
+                                               Foreground="{StaticResource PrimaryBrush}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,16">
+                                    <TextBlock Text="総宿泊泊数" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="PvTotalNights" FontSize="22" FontWeight="Bold"
+                                               Foreground="{StaticResource PrimaryBrush}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,16">
+                                    <TextBlock Text="徴収済み宿泊税合計" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="PvTotalTax" FontSize="22" FontWeight="Bold"
+                                               Foreground="{StaticResource SuccessBrush}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,0,16">
+                                    <TextBlock Text="決済済み件数" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="PvPaidCount" FontSize="22" FontWeight="Bold"
+                                               Foreground="{StaticResource SuccessBrush}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,16">
+                                    <TextBlock Text="未決済件数" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock x:Name="PvUnpaidCount" FontSize="22" FontWeight="Bold"
+                                               Foreground="{StaticResource DangerBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ③ システム設定 -->
+            <TabItem Header="システム設定">
+                <ScrollViewer Margin="8" VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="640">
+
+                        <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="施設情報" FontSize="15" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
+                                <TextBlock Text="施設名 *" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="PropertyNameBox" Margin="0,0,0,10"/>
+                                <TextBlock Text="施設住所 *" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="PropertyAddressBox" Margin="0,0,0,10"/>
+                                <TextBlock Text="事業者情報" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="BusinessInfoBox" Margin="0,0,0,10" Height="60"
+                                         AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"/>
+                                <TextBlock Text="インボイス登録番号（T番号）" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaxNumberBox" Margin="0,0,0,10" Style="{StaticResource PlaceholderTextBox}" Tag="T1234567890123"/>
+                                <TextBlock Text="宿泊税単価（円 / 人 / 泊）" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaxRateBox" Margin="0,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Stripe 決済設定" FontSize="15" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
+                                <TextBlock Text="Stripe Secret Key *" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="StripeKeyBox" Style="{StaticResource PlaceholderTextBox}"
+                                         Tag="sk_live_..." Margin="0,0,0,4"/>
+                                <TextBlock Text="※ 暗号化して保存されます" FontSize="11"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="メール設定（SMTP）" FontSize="15" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
+                                <TextBlock Text="SMTPホスト *" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SmtpHostBox" Style="{StaticResource PlaceholderTextBox}"
+                                         Tag="smtp.gmail.com" Margin="0,0,0,10"/>
+                                <TextBlock Text="SMTPポート" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SmtpPortBox" Style="{StaticResource PlaceholderTextBox}"
+                                         Tag="587" Margin="0,0,0,10"/>
+                                <TextBlock Text="送信元メールアドレス *" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SmtpUserBox" Margin="0,0,0,10"/>
+                                <TextBlock Text="SMTPパスワード *" Style="{StaticResource FieldLabel}"/>
+                                <PasswordBox x:Name="SmtpPassBox" Margin="0,0,0,4"/>
+                                <TextBlock Text="※ 暗号化して保存されます" FontSize="11"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="管理パスワード変更" FontSize="15" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
+                                <TextBlock Text="新しいパスワード（8文字以上）" Style="{StaticResource FieldLabel}"/>
+                                <PasswordBox x:Name="NewPassBox" Margin="0,0,0,10"/>
+                                <TextBlock Text="パスワード確認" Style="{StaticResource FieldLabel}"/>
+                                <PasswordBox x:Name="ConfirmPassBox"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="💾  設定を保存" Style="{StaticResource PrimaryButton}"
+                                HorizontalAlignment="Right" Padding="24,12" Margin="0,0,0,16"
+                                Click="SaveSettingsButton_Click"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ④ バックアップ -->
+            <TabItem Header="バックアップ">
+                <Border Style="{StaticResource CardBorder}" Margin="8" VerticalAlignment="Top" MaxWidth="500">
+                    <StackPanel>
+                        <TextBlock Text="データベースバックアップ" FontSize="15" FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
+
+                        <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="13" Margin="0,0,0,20"
+                                   Text="宿泊者データ・決済履歴・設定情報を含むデータベースファイルを任意の場所に保存します。定期的なバックアップを推奨します。"/>
+
+                        <TextBlock Text="保存先" Style="{StaticResource FieldLabel}"/>
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="BackupPathBox" Grid.Column="0" IsReadOnly="True"
+                                     Style="{StaticResource PlaceholderTextBox}" Tag="保存先フォルダを選択..."/>
+                            <Button Grid.Column="2" Content="参照..." Style="{StaticResource PrimaryButton}"
+                                    Padding="12,8" Click="BrowseBackupButton_Click"/>
+                        </Grid>
+
+                        <Button Content="💾  今すぐバックアップ" Style="{StaticResource SuccessButton}"
+                                Click="BackupButton_Click"/>
+
+                        <Border Background="#F0FFF4" CornerRadius="6" Padding="12" Margin="0,16,0,0">
+                            <TextBlock x:Name="BackupStatusText" TextWrapping="Wrap" FontSize="12"
+                                       Foreground="#065F46" Text=""/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+
+        </TabControl>
+    </Grid>
+</Window>
