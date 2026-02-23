@@ -117,8 +117,12 @@ namespace AccommodationSystem.Views
         {
             var yearItem = YearCombo.SelectedItem as ComboBoxItem;
             var monthItem = MonthCombo.SelectedItem as ComboBoxItem;
-            int year = yearItem != null ? (int)yearItem.Tag : DateTime.Now.Year;
-            int month = monthItem != null ? (int)monthItem.Tag : DateTime.Now.Month;
+            int year = yearItem != null
+                ? int.Parse(yearItem.Content.ToString().Replace("年", ""))
+                : DateTime.Now.Year;
+            int month = monthItem != null
+                ? int.Parse(monthItem.Content.ToString().Replace("月", ""))
+                : DateTime.Now.Month;
             return (year, month);
         }
 
@@ -159,7 +163,8 @@ namespace AccommodationSystem.Views
                 return;
             }
 
-            var excelBytes = ExcelService.GenerateMonthlySummary(year, month, reservations);
+            var settings = DatabaseService.GetSettings();
+            var excelBytes = ExcelService.GenerateMonthlySummary(year, month, reservations, settings);
 
             var saveDlg = new SaveFileDialog
             {
