@@ -76,6 +76,31 @@ namespace AccommodationSystem.Data
                 cmd.ExecuteNonQuery();
                 InsertDefaultSettings(conn);
             }
+
+            // スキーママイグレーション：既存DBに不足カラムを追加
+            RunMigrations();
+        }
+
+        private static void RunMigrations()
+        {
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                // receipts.email_hash が存在しない古いDBへの対応
+                var check = conn.CreateCommand();
+                check.CommandText = "PRAGMA table_info(receipts)";
+                bool hasEmailHash = false;
+                using (var reader = check.ExecuteReader())
+                    while (reader.Read())
+                        if (reader.GetString(1) == "email_hash") { hasEmailHash = true; break; }
+
+                if (!hasEmailHash)
+                {
+                    var alter = conn.CreateCommand();
+                    alter.CommandText = "ALTER TABLE receipts ADD COLUMN email_hash TEXT NOT NULL DEFAULT ''";
+                    alter.ExecuteNonQuery();
+                }
+            }
         }
 
         private static void InsertDefaultSettings(SQLiteConnection conn)
