@@ -227,8 +227,17 @@
                                          VerticalScrollBarVisibility="Auto"/>
                                 <TextBlock Text="インボイス登録番号（T番号）" Style="{StaticResource FieldLabel}"/>
                                 <TextBox x:Name="TaxNumberBox" Margin="0,0,0,10" Style="{StaticResource PlaceholderTextBox}" Tag="T1234567890123"/>
-                                <TextBlock Text="宿泊税単価（円 / 人 / 泊）" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaxRateBox" Margin="0,0,0,0"/>
+                                <TextBlock Text="市区町村（宿泊税マスタ）" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox x:Name="MunicipalityCombo" Margin="0,0,0,10" FontSize="13"
+                                          SelectionChanged="MunicipalityCombo_SelectionChanged"/>
+                                <TextBlock Text="一人当たり宿泊料金（円）" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="DefaultRoomRateBox" Margin="0,0,0,10"
+                                         Style="{StaticResource PlaceholderTextBox}" Tag="例: 10000"
+                                         TextChanged="DefaultRoomRateBox_TextChanged"/>
+                                <TextBlock Text="宿泊税単価（自動計算）" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock x:Name="EffectiveTaxRateText" FontSize="15" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}" Margin="0,2,0,0"
+                                           Text="—"/>
                             </StackPanel>
                         </Border>
 
