@@ -14,6 +14,5 @@ namespace AccommodationSystem.Models
         public string BusinessInfo { get; set; } = "";
         public string TaxNumber { get; set; } = "";
         public string Municipality { get; set; } = "札幌市";
-        public decimal DefaultRoomRatePerPerson { get; set; } = 10000m;
     }
 }

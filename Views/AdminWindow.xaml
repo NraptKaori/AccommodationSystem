@@ -105,10 +105,11 @@
                             <DataGridTextColumn Header="宿泊者名" Binding="{Binding GuestName}" Width="*"/>
                             <DataGridTextColumn Header="チェックイン" Binding="{Binding CheckinDate, StringFormat=yyyy/MM/dd}" Width="110"/>
                             <DataGridTextColumn Header="チェックアウト" Binding="{Binding CheckoutDate, StringFormat=yyyy/MM/dd}" Width="110"/>
-                            <DataGridTextColumn Header="人数" Binding="{Binding NumPersons}" Width="55"/>
-                            <DataGridTextColumn Header="泊数" Binding="{Binding NumNights}" Width="55"/>
-                            <DataGridTextColumn Header="宿泊税" Binding="{Binding AccommodationTax, StringFormat=\{0:¥#\,##0\}}" Width="90"/>
-                            <DataGridTextColumn Header="決済状態" Binding="{Binding PaymentStatusDisplay}" Width="90"/>
+                            <DataGridTextColumn Header="人数" Binding="{Binding NumPersons}" Width="50"/>
+                            <DataGridTextColumn Header="泊数" Binding="{Binding NumNights}" Width="50"/>
+                            <DataGridTextColumn Header="1人1泊料金" Binding="{Binding RoomRatePerPersonPerNight, StringFormat=\{0:¥#\,##0\}}" Width="95"/>
+                            <DataGridTextColumn Header="宿泊税合計" Binding="{Binding AccommodationTax, StringFormat=\{0:¥#\,##0\}}" Width="90"/>
+                            <DataGridTextColumn Header="決済状態" Binding="{Binding PaymentStatusDisplay}" Width="80"/>
                             <DataGridTextColumn Header="決済日時" Binding="{Binding PaymentDate, StringFormat=yyyy/MM/dd HH:mm}" Width="130"/>
                         </DataGrid.Columns>
                     </DataGrid>
@@ -228,16 +229,9 @@
                                 <TextBlock Text="インボイス登録番号（T番号）" Style="{StaticResource FieldLabel}"/>
                                 <TextBox x:Name="TaxNumberBox" Margin="0,0,0,10" Style="{StaticResource PlaceholderTextBox}" Tag="T1234567890123"/>
                                 <TextBlock Text="市区町村（宿泊税マスタ）" Style="{StaticResource FieldLabel}"/>
-                                <ComboBox x:Name="MunicipalityCombo" Margin="0,0,0,10" FontSize="13"
-                                          SelectionChanged="MunicipalityCombo_SelectionChanged"/>
-                                <TextBlock Text="一人当たり宿泊料金（円）" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="DefaultRoomRateBox" Margin="0,0,0,10"
-                                         Style="{StaticResource PlaceholderTextBox}" Tag="例: 10000"
-                                         TextChanged="DefaultRoomRateBox_TextChanged"/>
-                                <TextBlock Text="宿泊税単価（自動計算）" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock x:Name="EffectiveTaxRateText" FontSize="15" FontWeight="Bold"
-                                           Foreground="{StaticResource PrimaryBrush}" Margin="0,2,0,0"
-                                           Text="—"/>
+                                <ComboBox x:Name="MunicipalityCombo" Margin="0,0,0,4" FontSize="13"/>
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                           Text="※ CSVの「Total Fee (Except tax)」から1人1泊料金を算出して宿泊税を自動計算します。"/>
                             </StackPanel>
                         </Border>
 

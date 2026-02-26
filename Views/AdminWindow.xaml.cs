@@ -220,32 +220,6 @@ namespace AccommodationSystem.Views
             }
             if (MunicipalityCombo.SelectedIndex < 0) MunicipalityCombo.SelectedIndex = 0;
 
-            DefaultRoomRateBox.Text = s.DefaultRoomRatePerPerson.ToString("0");
-            UpdateEffectiveTaxRate();
-        }
-
-        // 市区町村 or 宿泊料金が変わったら税率を自動更新
-        private void MunicipalityCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-            => UpdateEffectiveTaxRate();
-
-        private void DefaultRoomRateBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-            => UpdateEffectiveTaxRate();
-
-        private void UpdateEffectiveTaxRate()
-        {
-            var municipality = (MunicipalityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString();
-            if (string.IsNullOrEmpty(municipality))
-            {
-                EffectiveTaxRateText.Text = "—";
-                return;
-            }
-            if (!decimal.TryParse(DefaultRoomRateBox.Text, out var rate) || rate < 0)
-            {
-                EffectiveTaxRateText.Text = "—（金額を正しく入力してください）";
-                return;
-            }
-            var tax = TaxMasterService.GetTaxPerPersonPerNight(municipality, rate);
-            EffectiveTaxRateText.Text = tax.ToString("N0") + " 円 / 人 / 泊";
         }
 
         private void SaveSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -260,11 +234,6 @@ namespace AccommodationSystem.Views
             if (string.IsNullOrEmpty(municipality))
             {
                 MessageBox.Show("市区町村を選択してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            if (!decimal.TryParse(DefaultRoomRateBox.Text, out var roomRate) || roomRate < 0)
-            {
-                MessageBox.Show("一人当たり宿泊料金は0以上の数値で入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (!string.IsNullOrEmpty(NewPassBox.Password))
@@ -283,16 +252,11 @@ namespace AccommodationSystem.Views
 
             try
             {
-                // 市区町村・宿泊料金から有効税率を自動計算して保存
-                var effectiveTax = TaxMasterService.GetTaxPerPersonPerNight(municipality, roomRate);
-
                 DatabaseService.SaveSetting("property_name", PropertyNameBox.Text.Trim());
                 DatabaseService.SaveSetting("property_address", PropertyAddressBox.Text.Trim());
                 DatabaseService.SaveSetting("business_info", BusinessInfoBox.Text.Trim());
                 DatabaseService.SaveSetting("tax_number", TaxNumberBox.Text.Trim());
                 DatabaseService.SaveSetting("municipality", municipality);
-                DatabaseService.SaveSetting("default_room_rate_per_person", roomRate.ToString("0"));
-                DatabaseService.SaveSetting("tax_rate_per_person_per_night", effectiveTax.ToString("0"));
                 DatabaseService.SaveSetting("stripe_api_key", StripeKeyBox.Text.Trim());
                 DatabaseService.SaveSetting("smtp_host", SmtpHostBox.Text.Trim());
                 DatabaseService.SaveSetting("smtp_port", SmtpPortBox.Text.Trim());
@@ -310,10 +274,8 @@ namespace AccommodationSystem.Views
                 }
 
                 DatabaseService.Log("settings_saved",
-                    $"Admin settings updated: municipality={municipality}, roomRate={roomRate}, taxRate={effectiveTax}");
-                MessageBox.Show(
-                    $"設定を保存しました。\n宿泊税単価: {effectiveTax:N0} 円 / 人 / 泊",
-                    "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                    $"Admin settings updated: municipality={municipality}");
+                MessageBox.Show("設定を保存しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {

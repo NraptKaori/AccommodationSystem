@@ -46,6 +46,7 @@ namespace AccommodationSystem.Data
                         num_persons INTEGER NOT NULL,
                         num_nights INTEGER NOT NULL,
                         accommodation_tax DECIMAL NOT NULL,
+                        total_fee DECIMAL NOT NULL DEFAULT 0,
                         payment_status TEXT DEFAULT 'unpaid',
                         payment_date DATETIME NULL,
                         stripe_payment_id TEXT NULL,
@@ -86,11 +87,12 @@ namespace AccommodationSystem.Data
             using (var conn = new SQLiteConnection(ConnectionString))
             {
                 conn.Open();
+
                 // receipts.email_hash が存在しない古いDBへの対応
-                var check = conn.CreateCommand();
-                check.CommandText = "PRAGMA table_info(receipts)";
+                var checkReceipts = conn.CreateCommand();
+                checkReceipts.CommandText = "PRAGMA table_info(receipts)";
                 bool hasEmailHash = false;
-                using (var reader = check.ExecuteReader())
+                using (var reader = checkReceipts.ExecuteReader())
                     while (reader.Read())
                         if (reader.GetString(1) == "email_hash") { hasEmailHash = true; break; }
 
@@ -98,6 +100,21 @@ namespace AccommodationSystem.Data
                 {
                     var alter = conn.CreateCommand();
                     alter.CommandText = "ALTER TABLE receipts ADD COLUMN email_hash TEXT NOT NULL DEFAULT ''";
+                    alter.ExecuteNonQuery();
+                }
+
+                // reservations.total_fee が存在しない古いDBへの対応
+                var checkRes = conn.CreateCommand();
+                checkRes.CommandText = "PRAGMA table_info(reservations)";
+                bool hasTotalFee = false;
+                using (var reader = checkRes.ExecuteReader())
+                    while (reader.Read())
+                        if (reader.GetString(1) == "total_fee") { hasTotalFee = true; break; }
+
+                if (!hasTotalFee)
+                {
+                    var alter = conn.CreateCommand();
+                    alter.CommandText = "ALTER TABLE reservations ADD COLUMN total_fee DECIMAL NOT NULL DEFAULT 0";
                     alter.ExecuteNonQuery();
                 }
             }
@@ -271,8 +288,8 @@ namespace AccommodationSystem.Data
                 conn.Open();
                 var cmd = conn.CreateCommand();
                 cmd.CommandText = @"INSERT OR REPLACE INTO reservations
-                    (reservation_number, guest_name, checkin_date, checkout_date, num_persons, num_nights, accommodation_tax, payment_status, payment_date, stripe_payment_id)
-                    VALUES (@rn, @gn, @ci, @co, @np, @nn, @tax, @ps, @pd, @sp)";
+                    (reservation_number, guest_name, checkin_date, checkout_date, num_persons, num_nights, accommodation_tax, total_fee, payment_status, payment_date, stripe_payment_id)
+                    VALUES (@rn, @gn, @ci, @co, @np, @nn, @tax, @tf, @ps, @pd, @sp)";
                 cmd.Parameters.AddWithValue("@rn", r.ReservationNumber);
                 cmd.Parameters.AddWithValue("@gn", r.GuestName);
                 cmd.Parameters.AddWithValue("@ci", r.CheckinDate.ToString("yyyy-MM-dd"));
@@ -280,6 +297,7 @@ namespace AccommodationSystem.Data
                 cmd.Parameters.AddWithValue("@np", r.NumPersons);
                 cmd.Parameters.AddWithValue("@nn", r.NumNights);
                 cmd.Parameters.AddWithValue("@tax", r.AccommodationTax);
+                cmd.Parameters.AddWithValue("@tf", r.TotalFee);
                 cmd.Parameters.AddWithValue("@ps", r.PaymentStatus);
                 cmd.Parameters.AddWithValue("@pd", r.PaymentDate.HasValue
                     ? (object)r.PaymentDate.Value.ToString("yyyy-MM-dd HH:mm:ss")
@@ -352,7 +370,6 @@ namespace AccommodationSystem.Data
                 SmtpPassword = DictGet(dict, "smtp_password", ""),
                 TaxRatePerPersonPerNight = decimal.Parse(DictGet(dict, "tax_rate_per_person_per_night", "300")),
                 Municipality = DictGet(dict, "municipality", "札幌市"),
-                DefaultRoomRatePerPerson = decimal.Parse(DictGet(dict, "default_room_rate_per_person", "10000")),
                 AdminPasswordHash = DictGet(dict, "admin_password_hash", ""),
                 BusinessInfo = DictGet(dict, "business_info", ""),
                 TaxNumber = DictGet(dict, "tax_number", ""),
@@ -483,6 +500,7 @@ namespace AccommodationSystem.Data
                 NumPersons = r.GetInt32(r.GetOrdinal("num_persons")),
                 NumNights = r.GetInt32(r.GetOrdinal("num_nights")),
                 AccommodationTax = r.GetDecimal(r.GetOrdinal("accommodation_tax")),
+                TotalFee = r.IsDBNull(r.GetOrdinal("total_fee")) ? 0m : r.GetDecimal(r.GetOrdinal("total_fee")),
                 PaymentStatus = r.GetString(r.GetOrdinal("payment_status")),
                 PaymentDate = r.IsDBNull(r.GetOrdinal("payment_date"))
                     ? (DateTime?)null

@@ -29,18 +29,23 @@ namespace AccommodationSystem.Services
 
             // ヘッダー解析
             var headers = ParseCsvLine(lines[0]);
-            int idxResNum = FindHeader(headers, "Reservation number", "予約番号");
-            int idxArrival = FindHeader(headers, "Arrival", "チェックイン日");
+            int idxResNum    = FindHeader(headers, "Reservation number", "予約番号");
+            int idxGuest     = FindHeader(headers, "Guest name", "宿泊者名");
+            int idxArrival   = FindHeader(headers, "Arrival", "チェックイン日");
             int idxDeparture = FindHeader(headers, "Departure", "チェックアウト日");
-            int idxGuest = FindHeader(headers, "Guest name", "宿泊者名");
-            int idxPersons = FindHeader(headers, "Persons", "宿泊人数");
-            int idxNights = FindHeader(headers, "Room nights", "宿泊泊数");
+            int idxPersons   = FindHeader(headers, "Persons", "宿泊人数");
+            int idxNights    = FindHeader(headers, "Room nights", "宿泊泊数");
+            int idxFee       = FindHeader(headers, "Total Fee (Except tax)", "Total Fee", "宿泊料金合計");
 
-            if (idxResNum < 0 || idxArrival < 0 || idxDeparture < 0 || idxGuest < 0 || idxPersons < 0 || idxNights < 0)
+            if (idxResNum < 0 || idxArrival < 0 || idxDeparture < 0 ||
+                idxGuest < 0 || idxPersons < 0 || idxNights < 0 || idxFee < 0)
             {
-                errors.Add("必須列が見つかりません。CSVのヘッダーを確認してください。");
+                errors.Add("必須列が見つかりません。CSVのヘッダーを確認してください。\n" +
+                           "必要な列: Reservation number, Guest name, Arrival, Departure, Persons, Room nights, Total Fee (Except tax)");
                 return (0, 0, errors);
             }
+
+            var municipality = settings.Municipality;
 
             for (int i = 1; i < lines.Length; i++)
             {
@@ -48,16 +53,33 @@ namespace AccommodationSystem.Services
                 try
                 {
                     var cols = ParseCsvLine(lines[i]);
+
+                    int numPersons = int.Parse(cols[idxPersons].Trim());
+                    int numNights  = int.Parse(cols[idxNights].Trim());
+
+                    // 数値カンマ・通貨記号を除去してパース
+                    var feeStr = cols[idxFee].Trim().Replace(",", "").Replace("¥", "").Replace("$", "");
+                    decimal totalFee = decimal.Parse(feeStr);
+
+                    // 1人1泊あたりの宿泊料金を算出して宿泊税を検索
+                    decimal roomRatePerPersonPerNight = (numPersons > 0 && numNights > 0)
+                        ? totalFee / numPersons / numNights
+                        : 0m;
+                    decimal taxPerPersonPerNight = TaxMasterService.GetTaxPerPersonPerNight(
+                        municipality, roomRatePerPersonPerNight);
+                    decimal accommodationTax = taxPerPersonPerNight * numPersons * numNights;
+
                     var r = new Reservation
                     {
                         ReservationNumber = cols[idxResNum].Trim(),
-                        GuestName = cols[idxGuest].Trim(),
-                        CheckinDate = DateTime.Parse(cols[idxArrival].Trim()),
-                        CheckoutDate = DateTime.Parse(cols[idxDeparture].Trim()),
-                        NumPersons = int.Parse(cols[idxPersons].Trim()),
-                        NumNights = int.Parse(cols[idxNights].Trim()),
+                        GuestName        = cols[idxGuest].Trim(),
+                        CheckinDate      = DateTime.Parse(cols[idxArrival].Trim()),
+                        CheckoutDate     = DateTime.Parse(cols[idxDeparture].Trim()),
+                        NumPersons       = numPersons,
+                        NumNights        = numNights,
+                        TotalFee         = totalFee,
+                        AccommodationTax = accommodationTax,
                     };
-                    r.AccommodationTax = r.NumPersons * r.NumNights * settings.TaxRatePerPersonPerNight;
 
                     if (DatabaseService.ReservationExists(r.ReservationNumber))
                     {
