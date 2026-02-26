@@ -198,7 +198,7 @@ namespace AccommodationSystem.Services
             // 行4: 特別徴収義務者 / 指定番号
             ws.Cell(4, 1).Value = "特別徴収義務者：";
             ws.Cell(4, 1).Style.Font.Bold = true;
-            ws.Cell(4, 2).Value = settings.PropertyName;
+            ws.Cell(4, 2).Value = settings.BusinessInfo;
             ws.Range(4, 2, 4, 5).Merge();
 
             ws.Cell(4, 7).Value = "指定番号：";
