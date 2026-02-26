@@ -47,26 +47,38 @@ namespace AccommodationSystem.Views
 
             try
             {
-                // Stripe PaymentMethod作成
                 StripeService.Configure();
-                var expParts = ExpBox.Text.Split('/');
-                var pmOptions = new PaymentMethodCreateOptions
+
+                // PaymentMethod ID を取得
+                // テストモード（sk_test_）ではカード番号からStripeテストトークンにマッピング
+                // 本番モードでは生カードデータ送信の特別権限が必要
+                string paymentMethodId;
+                if (StripeService.IsTestMode())
                 {
-                    Type = "card",
-                    Card = new PaymentMethodCardOptions
+                    paymentMethodId = GetTestPaymentMethodId(CardNumberBox.Text.Replace(" ", ""));
+                }
+                else
+                {
+                    var expParts = ExpBox.Text.Split('/');
+                    var pmOptions = new PaymentMethodCreateOptions
                     {
-                        Number = CardNumberBox.Text.Replace(" ", ""),
-                        ExpMonth = long.Parse(expParts[0]),
-                        ExpYear = long.Parse("20" + expParts[1]),
-                        Cvc = CvcBox.Password,
-                    },
-                };
-                var pmService = new PaymentMethodService();
-                var pm = await pmService.CreateAsync(pmOptions);
+                        Type = "card",
+                        Card = new PaymentMethodCardOptions
+                        {
+                            Number = CardNumberBox.Text.Replace(" ", ""),
+                            ExpMonth = long.Parse(expParts[0]),
+                            ExpYear = long.Parse("20" + expParts[1]),
+                            Cvc = CvcBox.Password,
+                        },
+                    };
+                    var pmService = new PaymentMethodService();
+                    var pm = await pmService.CreateAsync(pmOptions);
+                    paymentMethodId = pm.Id;
+                }
 
                 // PaymentIntent作成・確認
                 var (_, intentId) = await StripeService.CreatePaymentIntent(_reservation.AccommodationTax);
-                var status = await StripeService.ConfirmPayment(intentId, pm.Id);
+                var status = await StripeService.ConfirmPayment(intentId, paymentMethodId);
 
                 if (status == "succeeded")
                 {
@@ -140,6 +152,21 @@ namespace AccommodationSystem.Views
                 return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// テストカード番号をStripeのテスト用PaymentMethod IDにマッピングする
+        /// 参考: https://docs.stripe.com/testing#cards
+        /// </summary>
+        private static string GetTestPaymentMethodId(string cardNumber)
+        {
+            if (cardNumber.StartsWith("4000000000000002")) return "pm_card_chargeDeclined";
+            if (cardNumber.StartsWith("4000000000009995")) return "pm_card_chargeDeclinedInsufficientFunds";
+            if (cardNumber.StartsWith("378282246310005"))  return "pm_card_amex";
+            if (cardNumber.StartsWith("6011111111111117")) return "pm_card_discover";
+            if (cardNumber.StartsWith("5555555555554444")) return "pm_card_mastercard";
+            if (cardNumber.StartsWith("4"))                return "pm_card_visa";
+            return "pm_card_visa";
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

@@ -13,6 +13,12 @@ namespace AccommodationSystem.Services
             StripeConfiguration.ApiKey = settings.StripeApiKey;
         }
 
+        public static bool IsTestMode()
+        {
+            var settings = DatabaseService.GetSettings();
+            return settings.StripeApiKey?.StartsWith("sk_test_") == true;
+        }
+
         /// <summary>
         /// PaymentIntentを作成してclient_secretを返す
         /// </summary>
