@@ -225,6 +225,18 @@ namespace AccommodationSystem.Data
             return list;
         }
 
+        public static bool ReservationExists(string reservationNumber)
+        {
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(1) FROM reservations WHERE reservation_number = @rn";
+                cmd.Parameters.AddWithValue("@rn", reservationNumber);
+                return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+            }
+        }
+
         public static void UpsertReservation(Reservation r)
         {
             using (var conn = new SQLiteConnection(ConnectionString))
