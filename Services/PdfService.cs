@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using PdfSharp.Fonts;
 using PdfSharp.Pdf;
 using PdfSharp.Drawing;
 using AccommodationSystem.Models;
@@ -12,6 +13,10 @@ namespace AccommodationSystem.Services
         public static byte[] GenerateReceipt(Reservation reservation, string receiptNumber)
         {
             var settings = DatabaseService.GetSettings();
+
+            // TTCフォントをPdfSharpで使えるようカスタムリゾルバーを登録
+            if (GlobalFontSettings.FontResolver == null)
+                GlobalFontSettings.FontResolver = new JapaneseFontResolver();
 
             var document = new PdfDocument();
             var page = document.AddPage();
