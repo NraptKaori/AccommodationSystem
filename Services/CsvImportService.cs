@@ -58,6 +58,13 @@ namespace AccommodationSystem.Services
                         NumNights = int.Parse(cols[idxNights].Trim()),
                     };
                     r.AccommodationTax = r.NumPersons * r.NumNights * settings.TaxRatePerPersonPerNight;
+
+                    if (DatabaseService.ReservationExists(r.ReservationNumber))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
                     DatabaseService.UpsertReservation(r);
                     imported++;
                 }
