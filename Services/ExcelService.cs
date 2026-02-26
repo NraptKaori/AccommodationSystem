@@ -38,31 +38,42 @@ namespace AccommodationSystem.Services
                 int categoryCol = GetCategoryColumn(settings.TaxRatePerPersonPerNight);
 
                 // --- 日別集計データを構築 ---
-                // dailyPersons[day][col]: その日・その区分の人数
+                // dailyPersons[day][col]: その日・その区分の人数（人泊）
                 var dailyPersons = new int[daysInMonth + 1, 9];
                 var dailyTax = new decimal[daysInMonth + 1];
                 var dailyTotalPersons = new int[daysInMonth + 1];
-                var colTaxTotals = new decimal[9]; // 区分ごとの税額合計
+                var colPersonTotals = new int[9]; // 区分ごとの人泊数合計
 
                 foreach (var r in reservations)
                 {
                     if (!r.IsPaid) continue;
-                    int d = r.CheckinDate.Day;
-                    if (d < 1 || d > daysInMonth) continue;
+                    // 1泊あたりの税額
+                    decimal taxPerNight = r.NumNights > 0
+                        ? r.AccommodationTax / r.NumNights
+                        : 0;
 
-                    dailyPersons[d, categoryCol] += r.NumPersons;
-                    dailyTax[d] += r.AccommodationTax;
-                    dailyTotalPersons[d] += r.NumPersons;
-                    colTaxTotals[categoryCol] += r.AccommodationTax;
+                    // 各宿泊日ごとにデータを分散（チェックイン日〜最終泊）
+                    for (int n = 0; n < r.NumNights; n++)
+                    {
+                        var nightDate = r.CheckinDate.AddDays(n);
+                        // 当月・当年のみ対象
+                        if (nightDate.Year != year || nightDate.Month != month) continue;
+
+                        int d = nightDate.Day;
+                        dailyPersons[d, categoryCol]  += r.NumPersons;
+                        dailyTax[d]                   += taxPerNight;
+                        dailyTotalPersons[d]          += r.NumPersons;
+                        colPersonTotals[categoryCol]  += r.NumPersons;
+                    }
                 }
 
+                // 合計はdaily配列から集計（月をまたぐ予約にも正確に対応）
                 decimal grandTotalTax = 0;
                 int grandTotalPersons = 0;
-                foreach (var r in reservations)
+                for (int d = 1; d <= daysInMonth; d++)
                 {
-                    if (!r.IsPaid) continue;
-                    grandTotalTax += r.AccommodationTax;
-                    grandTotalPersons += r.NumPersons;
+                    grandTotalTax     += dailyTax[d];
+                    grandTotalPersons += dailyTotalPersons[d];
                 }
 
                 // =========================================
@@ -123,10 +134,10 @@ namespace AccommodationSystem.Services
                 for (int c = 2; c <= 8; c++)
                 {
                     var cell = ws.Cell(totalRow, c);
-                    if (colTaxTotals[c] > 0)
+                    if (colPersonTotals[c] > 0)
                     {
-                        cell.Value = (double)colTaxTotals[c];
-                        cell.Style.NumberFormat.Format = "#,##0";
+                        cell.Value = colPersonTotals[c];
+                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     }
                     cell.Style.Font.Bold = true;
                     cell.Style.Fill.BackgroundColor = totalBg;
