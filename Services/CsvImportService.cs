@@ -19,7 +19,7 @@ namespace AccommodationSystem.Services
             var settings = DatabaseService.GetSettings();
 
             
-            var lines = File.ReadAllLines(filePath, Encoding.UTF8);
+            var lines = File.ReadAllLines(filePath, DetectEncoding(filePath));
 
             if (lines.Length < 2)
             {
@@ -75,6 +75,40 @@ namespace AccommodationSystem.Services
                 }
             }
             return (imported, skipped, errors);
+        }
+
+        /// <summary>
+        /// BOMまたはUTF-8デコード可否でエンコーディングを判定し、
+        /// 失敗時はCP932（Shift-JIS）を返す
+        /// </summary>
+        private static Encoding DetectEncoding(string filePath)
+        {
+            byte[] bom = new byte[4];
+            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                fs.Read(bom, 0, 4);
+
+            // BOM付きUTF-8
+            if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
+                return new UTF8Encoding(true);
+            // BOM付きUTF-16 LE
+            if (bom[0] == 0xFF && bom[1] == 0xFE)
+                return Encoding.Unicode;
+            // BOM付きUTF-16 BE
+            if (bom[0] == 0xFE && bom[1] == 0xFF)
+                return Encoding.BigEndianUnicode;
+
+            // BOMなし：UTF-8として読めるか検証
+            try
+            {
+                var utf8 = new UTF8Encoding(false, throwOnInvalidBytes: true);
+                utf8.GetString(File.ReadAllBytes(filePath));
+                return utf8;
+            }
+            catch
+            {
+                // UTF-8で読めない場合はCP932（Shift-JIS）
+                return Encoding.GetEncoding(932);
+            }
         }
 
         private static string[] ParseCsvLine(string line)
