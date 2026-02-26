@@ -35,7 +35,7 @@ namespace AccommodationSystem.Services
             int idxDeparture = FindHeader(headers, "Departure", "チェックアウト日");
             int idxPersons   = FindHeader(headers, "Persons", "宿泊人数");
             int idxNights    = FindHeader(headers, "Room nights", "宿泊泊数");
-            int idxFee       = FindHeader(headers, "Total Fee (Except tax)", "Total Fee", "宿泊料金合計");
+            int idxFee       = FindHeader(headers, "Total Fee (Except tax)", "Total Fee (Except tax )", "Total Fee", "宿泊料金合計");
 
             if (idxResNum < 0 || idxArrival < 0 || idxDeparture < 0 ||
                 idxGuest < 0 || idxPersons < 0 || idxNights < 0 || idxFee < 0)
@@ -151,9 +151,21 @@ namespace AccommodationSystem.Services
         private static int FindHeader(string[] headers, params string[] candidates)
         {
             for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim();
+                // スペースを全除去した文字列（括弧内スペースのゆれを吸収）
+                var headerNoSpace = header.Replace(" ", "");
+
                 foreach (var c in candidates)
-                    if (headers[i].Trim().Equals(c, StringComparison.OrdinalIgnoreCase))
+                {
+                    // 通常比較（Trim済み）
+                    if (header.Equals(c.Trim(), StringComparison.OrdinalIgnoreCase))
                         return i;
+                    // スペース全除去で比較（"Total Fee (Except tax )" などのゆれを吸収）
+                    if (headerNoSpace.Equals(c.Replace(" ", ""), StringComparison.OrdinalIgnoreCase))
+                        return i;
+                }
+            }
             return -1;
         }
     }

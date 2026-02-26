@@ -1,5 +1,6 @@
-Reservation number,Guest name,Arrival,Departure,Persons,Room nights
-BK-001,Yamada Taro,2026-02-20,2026-02-22,2,2
-BK-002,Suzuki Hanako,2026-02-21,2026-02-23,1,2
-BK-003,Tanaka Ichiro,2026-02-22,2026-02-25,3,3
-BK-004,Sato Yuki,2026-02-23,2026-02-24,2,1
+Reservation number,Guest name,Arrival,Departure,Persons,Room nights,Total Fee (Except tax )
+BK-001,Yamada Taro,2026-02-20,2026-02-22,2,2,40000
+BK-002,Suzuki Hanako,2026-02-21,2026-02-23,1,2,30000
+BK-003,Tanaka Ichiro,2026-02-22,2026-02-25,3,3,270000
+BK-004,Sato Yuki,2026-02-23,2026-02-24,2,1,60000
+BK-005,Kato Kenji,2026-02-24,2026-02-26,4,2,320000
