@@ -18,7 +18,6 @@ namespace AccommodationSystem.Services
             var errors = new List<string>();
             var settings = DatabaseService.GetSettings();
 
-            
             var lines = File.ReadAllLines(filePath, DetectEncoding(filePath));
 
             if (lines.Length < 2)
@@ -27,21 +26,28 @@ namespace AccommodationSystem.Services
                 return (0, 0, errors);
             }
 
-            // ヘッダー解析
-            var headers = ParseCsvLine(lines[0]);
-            int idxResNum    = FindHeader(headers, "Reservation number", "予約番号");
-            int idxGuest     = FindHeader(headers, "Guest name", "宿泊者名");
-            int idxArrival   = FindHeader(headers, "Arrival", "チェックイン日");
-            int idxDeparture = FindHeader(headers, "Departure", "チェックアウト日");
-            int idxPersons   = FindHeader(headers, "Persons", "宿泊人数");
-            int idxNights    = FindHeader(headers, "Room nights", "宿泊泊数");
-            int idxFee       = FindHeader(headers, "Total Fee (Except tax)", "Total Fee (Except tax )", "Total Fee", "宿泊料金合計");
+            // 区切り文字を自動検出（タブが多ければTSV、そうでなければCSV）
+            char sep = DetectSeparator(lines[0]);
+
+            // ヘッダー解析（先頭のBOMを除去してからパース）
+            var headers = ParseLine(lines[0].TrimStart('\uFEFF'), sep);
+            int idxResNum    = FindHeader(headers, "Reservation number", "予約番号", "Confirmation Code");
+            int idxGuest     = FindHeader(headers, "Guest name", "宿泊者名", "Guest");
+            int idxArrival   = FindHeader(headers, "Arrival", "チェックイン日", "Start Date", "Check-in");
+            int idxDeparture = FindHeader(headers, "Departure", "チェックアウト日", "End Date", "Check-out");
+            int idxPersons   = FindHeader(headers, "Persons", "宿泊人数", "# Guests", "Guests");
+            int idxNights    = FindHeader(headers, "Room nights", "宿泊泊数", "# Nights", "Nights");
+            int idxFee       = FindHeader(headers, "Total Fee (Except tax)", "Total Fee (Except tax )",
+                                          "Total Fee", "宿泊料金合計", "Amount", "Net Revenue", "Payout", "Revenue");
 
             if (idxResNum < 0 || idxArrival < 0 || idxDeparture < 0 ||
                 idxGuest < 0 || idxPersons < 0 || idxNights < 0 || idxFee < 0)
             {
+                // 実際に見つかったヘッダーを表示してデバッグしやすくする
                 errors.Add("必須列が見つかりません。CSVのヘッダーを確認してください。\n" +
-                           "必要な列: Reservation number, Guest name, Arrival, Departure, Persons, Room nights, Total Fee (Except tax)");
+                           "必要な列: Reservation number, Guest name, Arrival, Departure, Persons, Room nights, Total Fee (Except tax)\n\n" +
+                           $"【CSVで検出した列（区切り文字:{(sep == '\t' ? "タブ" : "カンマ")}）】\n" +
+                           string.Join(", ", headers));
                 return (0, 0, errors);
             }
 
@@ -52,7 +58,7 @@ namespace AccommodationSystem.Services
                 if (string.IsNullOrWhiteSpace(lines[i])) continue;
                 try
                 {
-                    var cols = ParseCsvLine(lines[i]);
+                    var cols = ParseLine(lines[i], sep);
 
                     int numPersons = int.Parse(cols[idxPersons].Trim());
                     int numNights  = int.Parse(cols[idxNights].Trim());
@@ -133,7 +139,16 @@ namespace AccommodationSystem.Services
             }
         }
 
-        private static string[] ParseCsvLine(string line)
+        /// <summary>タブとカンマの数を比べて区切り文字を推定</summary>
+        private static char DetectSeparator(string headerLine)
+        {
+            int tabs   = 0;
+            int commas = 0;
+            foreach (var ch in headerLine) { if (ch == '\t') tabs++; else if (ch == ',') commas++; }
+            return tabs > commas ? '\t' : ',';
+        }
+
+        private static string[] ParseLine(string line, char sep)
         {
             var result = new List<string>();
             bool inQuotes = false;
@@ -141,7 +156,7 @@ namespace AccommodationSystem.Services
             foreach (var ch in line)
             {
                 if (ch == '"') { inQuotes = !inQuotes; }
-                else if (ch == ',' && !inQuotes) { result.Add(current.ToString()); current.Clear(); }
+                else if (ch == sep && !inQuotes) { result.Add(current.ToString()); current.Clear(); }
                 else current.Append(ch);
             }
             result.Add(current.ToString());
