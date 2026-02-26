@@ -27,6 +27,9 @@ namespace AccommodationSystem.Views
             CheckoutText.Text = _reservation.CheckoutDate.ToString("yyyy/MM/dd");
             PersonsText.Text = $"{_reservation.NumPersons} 名";
             NightsText.Text = $"{_reservation.NumNights} 泊";
+            RoomRateText.Text = _reservation.RoomRatePerPersonPerNight > 0
+                ? $"¥ {_reservation.RoomRatePerPersonPerNight:N0}"
+                : "—";
             TaxAmountText.Text = $"¥ {_reservation.AccommodationTax:N0}";
 
             if (_reservation.IsPaid)
