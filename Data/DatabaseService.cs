@@ -73,9 +73,18 @@ namespace AccommodationSystem.Data
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         attempt_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         success INTEGER NOT NULL DEFAULT 0
+                    );
+                    CREATE TABLE IF NOT EXISTS tax_master (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        municipality TEXT NOT NULL,
+                        from_amount INTEGER NOT NULL DEFAULT 0,
+                        to_amount INTEGER,
+                        tax_amount INTEGER NOT NULL DEFAULT 0,
+                        sort_order INTEGER NOT NULL DEFAULT 0
                     );";
                 cmd.ExecuteNonQuery();
                 InsertDefaultSettings(conn);
+                EnsureDefaultTaxRates(conn);
             }
 
             // スキーママイグレーション：既存DBに不足カラムを追加
@@ -117,6 +126,40 @@ namespace AccommodationSystem.Data
                     alter.CommandText = "ALTER TABLE reservations ADD COLUMN total_fee DECIMAL NOT NULL DEFAULT 0";
                     alter.ExecuteNonQuery();
                 }
+
+                // receipts に旧 email カラム（NOT NULL）が残っている場合テーブルを再構築して除去
+                var checkEmailCol = conn.CreateCommand();
+                checkEmailCol.CommandText = "PRAGMA table_info(receipts)";
+                bool hasOldEmailCol = false;
+                using (var reader = checkEmailCol.ExecuteReader())
+                    while (reader.Read())
+                        if (reader.GetString(1) == "email") { hasOldEmailCol = true; break; }
+
+                if (hasOldEmailCol)
+                {
+                    var c1 = conn.CreateCommand();
+                    c1.CommandText = @"CREATE TABLE IF NOT EXISTS receipts_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        reservation_id INTEGER NOT NULL,
+                        receipt_number TEXT NOT NULL,
+                        issued_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        email_hash TEXT NOT NULL DEFAULT ''
+                    )";
+                    c1.ExecuteNonQuery();
+
+                    var c2 = conn.CreateCommand();
+                    c2.CommandText = @"INSERT INTO receipts_new (id, reservation_id, receipt_number, issued_at, email_hash)
+                        SELECT id, reservation_id, receipt_number, issued_at, COALESCE(email_hash, '') FROM receipts";
+                    c2.ExecuteNonQuery();
+
+                    var c3 = conn.CreateCommand();
+                    c3.CommandText = "DROP TABLE receipts";
+                    c3.ExecuteNonQuery();
+
+                    var c4 = conn.CreateCommand();
+                    c4.CommandText = "ALTER TABLE receipts_new RENAME TO receipts";
+                    c4.ExecuteNonQuery();
+                }
             }
         }
 
@@ -147,6 +190,155 @@ namespace AccommodationSystem.Data
                 cmd.Parameters.AddWithValue("@k", kv.Key);
                 cmd.Parameters.AddWithValue("@v", kv.Value);
                 cmd.ExecuteNonQuery();
+            }
+        }
+
+        // ---- Tax Master ----
+
+        // デフォルト税率テーブル (市区町村, 下限以上, 上限以下 null=上限なし, 宿泊税/人/泊)
+        private static readonly (string Muni, int From, int? To, int Tax)[] DefaultTaxRates =
+        {
+            // 札幌市（道税100円 + 市税）
+            ("札幌市",        0,  19999, 300),
+            ("札幌市",    20000,  49999, 400),
+            ("札幌市",    50000,   null, 1000),
+            // 小樽市（道税100円 + 市税）
+            ("小樽市",        0,  19999, 300),
+            ("小樽市",    20000,  49999, 400),
+            ("小樽市",    50000,   null, 700),
+            // ニセコ町（道税100円 + 町税）
+            ("ニセコ町",      0,   5000, 200),
+            ("ニセコ町",   5001,  19999, 300),
+            ("ニセコ町",  20000,  49999, 700),
+            ("ニセコ町",  50000,  99999, 1500),
+            ("ニセコ町", 100000,   null, 2500),
+            // 留寿都村（道税100円 + 村税）
+            ("留寿都村",      0,  19999, 200),
+            ("留寿都村",  20000,  49999, 400),
+            ("留寿都村",  50000,   null, 1000),
+            // 赤井川村（道税100円 + 村税）
+            ("赤井川村",      0,   7999, 100),
+            ("赤井川村",   8000,  19999, 300),
+            ("赤井川村",  20000,  49999, 700),
+            ("赤井川村",  50000,   null, 1000),
+            // 洞爺湖町（道税100円 + 町税）
+            ("洞爺湖町",      0,  19999, 300),
+            ("洞爺湖町",  20000,  49999, 700),
+            ("洞爺湖町",  50000,   null, 1500),
+            // 函館市（道税100円 + 市税）
+            ("函館市",        0,  19999, 200),
+            ("函館市",    20000,  49999, 400),
+            ("函館市",    50000,  99999, 1000),
+            ("函館市",   100000,   null, 2500),
+        };
+
+        private static void EnsureDefaultTaxRates(SQLiteConnection conn)
+        {
+            var countCmd = conn.CreateCommand();
+            countCmd.CommandText = "SELECT COUNT(*) FROM tax_master";
+            if (Convert.ToInt32(countCmd.ExecuteScalar()) > 0) return;
+            InsertDefaultTaxRatesCore(conn);
+        }
+
+        private static void InsertDefaultTaxRatesCore(SQLiteConnection conn)
+        {
+            int sort = 1;
+            foreach (var (muni, from, to, tax) in DefaultTaxRates)
+            {
+                var cmd = conn.CreateCommand();
+                cmd.CommandText = @"INSERT INTO tax_master (municipality, from_amount, to_amount, tax_amount, sort_order)
+                                    VALUES (@muni, @from, @to, @tax, @sort)";
+                cmd.Parameters.AddWithValue("@muni", muni);
+                cmd.Parameters.AddWithValue("@from", from);
+                cmd.Parameters.AddWithValue("@to", to.HasValue ? (object)to.Value : DBNull.Value);
+                cmd.Parameters.AddWithValue("@tax", tax);
+                cmd.Parameters.AddWithValue("@sort", sort++);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static List<TaxRate> GetTaxRates()
+        {
+            var list = new List<TaxRate>();
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT id, municipality, from_amount, to_amount, tax_amount, sort_order FROM tax_master ORDER BY sort_order, id";
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                        list.Add(new TaxRate
+                        {
+                            Id = r.GetInt32(0),
+                            Municipality = r.GetString(1),
+                            FromAmount = r.GetInt32(2),
+                            ToAmount = r.IsDBNull(3) ? (int?)null : r.GetInt32(3),
+                            TaxAmount = r.GetInt32(4),
+                            SortOrder = r.GetInt32(5),
+                        });
+                }
+            }
+            return list;
+        }
+
+        public static List<string> GetMunicipalities()
+        {
+            var list = new List<string>();
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT municipality FROM tax_master GROUP BY municipality ORDER BY MIN(id)";
+                using (var r = cmd.ExecuteReader())
+                    while (r.Read())
+                        list.Add(r.GetString(0));
+            }
+            return list;
+        }
+
+        public static void SaveTaxRates(List<TaxRate> rates)
+        {
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
+                {
+                    var del = conn.CreateCommand();
+                    del.CommandText = "DELETE FROM tax_master";
+                    del.ExecuteNonQuery();
+
+                    int sort = 1;
+                    foreach (var r in rates)
+                    {
+                        var cmd = conn.CreateCommand();
+                        cmd.CommandText = @"INSERT INTO tax_master (municipality, from_amount, to_amount, tax_amount, sort_order)
+                                            VALUES (@muni, @from, @to, @tax, @sort)";
+                        cmd.Parameters.AddWithValue("@muni", r.Municipality);
+                        cmd.Parameters.AddWithValue("@from", r.FromAmount);
+                        cmd.Parameters.AddWithValue("@to", r.ToAmount.HasValue ? (object)r.ToAmount.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue("@tax", r.TaxAmount);
+                        cmd.Parameters.AddWithValue("@sort", sort++);
+                        cmd.ExecuteNonQuery();
+                    }
+                    tx.Commit();
+                }
+            }
+        }
+
+        public static void ResetTaxRatesToDefaults()
+        {
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
+                {
+                    var del = conn.CreateCommand();
+                    del.CommandText = "DELETE FROM tax_master";
+                    del.ExecuteNonQuery();
+                    InsertDefaultTaxRatesCore(conn);
+                    tx.Commit();
+                }
             }
         }
 
@@ -435,6 +627,27 @@ namespace AccommodationSystem.Data
                 cmd.CommandText = "SELECT COUNT(*) FROM receipts WHERE reservation_id=@id";
                 cmd.Parameters.AddWithValue("@id", reservationId);
                 return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+        }
+
+        // ---- Data Clear ----
+
+        /// <summary>予約・領収書・監査ログを全削除（設定・税率マスタは保持）</summary>
+        public static void ClearAllReservations()
+        {
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
+                {
+                    foreach (var table in new[] { "receipts", "audit_log", "login_attempts", "reservations" })
+                    {
+                        var cmd = conn.CreateCommand();
+                        cmd.CommandText = $"DELETE FROM {table}";
+                        cmd.ExecuteNonQuery();
+                    }
+                    tx.Commit();
+                }
             }
         }
 

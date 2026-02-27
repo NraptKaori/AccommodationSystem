@@ -1,0 +1,104 @@
+name: Build Installer
+
+on:
+  # タグ push 時に自動実行（例: git tag v1.0.0 && git push origin v1.0.0）
+  push:
+    tags:
+      - 'v*'
+  # 手動実行も可能
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'バージョン番号 (例: 1.0.1)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $v = "${{ github.ref_name }}" -replace '^v', ''
+          } else {
+            $v = "${{ github.event.inputs.version }}"
+          }
+          echo "VERSION=$v" >> $env:GITHUB_OUTPUT
+          echo "Version: $v"
+
+      - name: Build (Release / x64)
+        shell: pwsh
+        run: |
+          dotnet build AccommodationSystem.csproj `
+            -c Release `
+            -p:Platform=x64 `
+            --nologo
+
+      - name: Verify build output
+        shell: pwsh
+        run: |
+          $dir = "bin\x64\Release\net48"
+          if (-not (Test-Path "$dir\AccommodationSystem.exe")) {
+            Write-Error "Build output not found at $dir"
+            exit 1
+          }
+          Write-Host "Build output OK:"
+          Get-ChildItem $dir | Select-Object Name, Length
+
+      - name: Install Inno Setup 6
+        shell: pwsh
+        run: |
+          $url = "https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
+          Invoke-WebRequest -Uri $url -OutFile "innosetup-installer.exe"
+          Start-Process "innosetup-installer.exe" `
+            -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" `
+            -Wait
+
+      - name: Update version in setup.iss
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          $content = Get-Content installer\setup.iss -Raw
+          $content = $content -replace '#define MyAppVersion\s+"[^"]+"', "#define MyAppVersion `"$version`""
+          Set-Content installer\setup.iss $content
+          Write-Host "Updated version to $version"
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          & $iscc "installer\setup.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AccommodationSystem-Setup-${{ steps.version.outputs.VERSION }}
+          path: installer\Output\*.exe
+          retention-days: 30
+
+      - name: Create GitHub Release (タグ push 時のみ)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.version.outputs.VERSION }}
+          files: installer\Output\*.exe
+          body: |
+            ## 宿泊税管理システム v${{ steps.version.outputs.VERSION }}
+
+            ### インストール方法
+            1. `AccommodationSystem-Setup-*.exe` をダウンロード
+            2. 実行してウィザードに従いインストール
+            3. .NET Framework 4.8 が必要です（Windows 10 1903以降は標準搭載）

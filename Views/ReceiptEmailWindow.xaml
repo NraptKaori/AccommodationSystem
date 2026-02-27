@@ -1,7 +1,9 @@
 <Window x:Class="AccommodationSystem.Views.ReceiptEmailWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="領収書の送付" Width="460" Height="340"
+        xmlns:svc="clr-namespace:AccommodationSystem.Services"
+        Title="Receipt"
+        Width="460" Height="340"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{StaticResource BackgroundBrush}">
@@ -14,18 +16,20 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- Title managed entirely by code-behind (changes for re-issue + language) -->
             <TextBlock Grid.Row="0" x:Name="TitleText"
-                       Text="領収書をメールで送付します" FontSize="17" FontWeight="Bold"
+                       FontSize="17" FontWeight="Bold"
                        Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,8"/>
 
-            <!-- 宿泊者情報サマリー -->
+            <!-- 宿泊者情報サマリー (code-behind) -->
             <Border Grid.Row="1" Background="#EBF4FF" CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
                 <TextBlock x:Name="ReservationSummary" FontSize="12"
                            Foreground="{StaticResource PrimaryBrush}"/>
             </Border>
 
             <StackPanel Grid.Row="2">
-                <TextBlock Text="送付先メールアドレス" Style="{StaticResource FieldLabel}"/>
+                <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=LblEmail}"
+                           Style="{StaticResource FieldLabel}"/>
                 <TextBox x:Name="EmailBox" Margin="0,0,0,4"
                          Style="{StaticResource PlaceholderTextBox}" Tag="example@email.com"/>
                 <TextBlock x:Name="StatusText" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
@@ -38,10 +42,12 @@
                     <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Content="スキップ"
+                <Button Grid.Column="0"
+                        Content="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=BtnSkip}"
                         Style="{StaticResource DangerButton}"
                         Click="SkipButton_Click"/>
-                <Button x:Name="SendButton" Grid.Column="2" Content="📧  送信する"
+                <!-- SendButton Content managed by code-behind -->
+                <Button x:Name="SendButton" Grid.Column="2"
                         Style="{StaticResource SuccessButton}"
                         Click="SendButton_Click"/>
             </Grid>

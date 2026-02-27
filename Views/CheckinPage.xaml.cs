@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using AccommodationSystem.Data;
 using AccommodationSystem.Models;
+using AccommodationSystem.Services;
 
 namespace AccommodationSystem.Views
 {
@@ -29,7 +30,9 @@ namespace AccommodationSystem.Views
             var query = SearchBox.Text.Trim();
             if (string.IsNullOrEmpty(query))
             {
-                MessageBox.Show("検索キーワードを入力してください。", "入力エラー",
+                MessageBox.Show(
+                    LanguageService.T("search_err_empty"),
+                    LanguageService.T("err_input_title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

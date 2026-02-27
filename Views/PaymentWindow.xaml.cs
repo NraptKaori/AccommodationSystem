@@ -16,28 +16,44 @@ namespace AccommodationSystem.Views
         {
             InitializeComponent();
             _reservation = reservation;
+
+            // Refresh dynamic labels whenever the language is toggled
+            LanguageService.LanguageChanged += LoadReservation;
+            Unloaded += (s, e) => LanguageService.LanguageChanged -= LoadReservation;
+
             LoadReservation();
         }
 
         private void LoadReservation()
         {
-            GuestNameText.Text = _reservation.GuestName;
-            ResNumText.Text = _reservation.ReservationNumber;
-            CheckinText.Text = _reservation.CheckinDate.ToString("yyyy/MM/dd");
-            CheckoutText.Text = _reservation.CheckoutDate.ToString("yyyy/MM/dd");
-            PersonsText.Text = $"{_reservation.NumPersons} 名";
-            NightsText.Text = $"{_reservation.NumNights} 泊";
-            RoomRateText.Text = _reservation.RoomRatePerPersonPerNight > 0
-                ? $"¥ {_reservation.RoomRatePerPersonPerNight:N0}"
-                : "—";
-            TaxAmountText.Text = $"¥ {_reservation.AccommodationTax:N0}";
+            GuestNameText.Text  = _reservation.GuestName;
+            ResNumText.Text     = _reservation.ReservationNumber;
+            CheckinText.Text    = _reservation.CheckinDate.ToString("yyyy/MM/dd");
+            CheckoutText.Text   = _reservation.CheckoutDate.ToString("yyyy/MM/dd");
+            PersonsText.Text    = $"{_reservation.NumPersons}{LanguageService.T("suffix_persons")}";
+            NightsText.Text     = $"{_reservation.NumNights}{LanguageService.T("suffix_nights")}";
+            RoomRateText.Text   = _reservation.RoomRatePerPersonPerNight > 0
+                                    ? $"¥ {_reservation.RoomRatePerPersonPerNight:N0}"
+                                    : "—";
+
+            var taxPerPerson = (_reservation.NumPersons > 0 && _reservation.NumNights > 0)
+                ? _reservation.AccommodationTax / _reservation.NumPersons / _reservation.NumNights
+                : 0m;
+            TaxPerPersonText.Text = taxPerPerson > 0 ? $"¥ {taxPerPerson:N0}" : "—";
+            TaxAmountText.Text    = $"¥ {_reservation.AccommodationTax:N0}";
 
             if (_reservation.IsPaid)
             {
                 AlreadyPaidBorder.Visibility = Visibility.Visible;
-                PaymentPanel.Visibility = Visibility.Collapsed;
-                PayButton.IsEnabled = false;
-                PayButton.Content = "支払い済み";
+                PaymentPanel.Visibility      = Visibility.Collapsed;
+                PayButton.IsEnabled          = false;
+                PayButton.Content            = LanguageService.T("btn_paid");
+            }
+            else
+            {
+                // Only reset content when not currently processing
+                if (PayButton.IsEnabled)
+                    PayButton.Content = LanguageService.T("btn_pay");
             }
         }
 
@@ -46,7 +62,7 @@ namespace AccommodationSystem.Views
             if (!ValidateInput()) return;
 
             PayButton.IsEnabled = false;
-            PayButton.Content = "処理中...";
+            PayButton.Content   = LanguageService.T("btn_processing");
 
             try
             {
@@ -62,47 +78,49 @@ namespace AccommodationSystem.Views
                 }
                 else
                 {
-                    var expParts = ExpBox.Text.Split('/');
+                    var expParts  = ExpBox.Text.Split('/');
                     var pmOptions = new PaymentMethodCreateOptions
                     {
                         Type = "card",
                         Card = new PaymentMethodCardOptions
                         {
-                            Number = CardNumberBox.Text.Replace(" ", ""),
+                            Number   = CardNumberBox.Text.Replace(" ", ""),
                             ExpMonth = long.Parse(expParts[0]),
-                            ExpYear = long.Parse("20" + expParts[1]),
-                            Cvc = CvcBox.Password,
+                            ExpYear  = long.Parse("20" + expParts[1]),
+                            Cvc      = CvcBox.Password,
                         },
                     };
-                    var pmService = new PaymentMethodService();
-                    var pm = await pmService.CreateAsync(pmOptions);
+                    var pmService   = new PaymentMethodService();
+                    var pm          = await pmService.CreateAsync(pmOptions);
                     paymentMethodId = pm.Id;
                 }
 
                 // PaymentIntent作成・確認
                 var (_, intentId) = await StripeService.CreatePaymentIntent(_reservation.AccommodationTax);
-                var status = await StripeService.ConfirmPayment(intentId, paymentMethodId);
+                var status        = await StripeService.ConfirmPayment(intentId, paymentMethodId);
 
                 if (status == "succeeded")
                 {
                     DatabaseService.UpdatePaymentStatus(_reservation.Id, intentId);
-                    DatabaseService.Log("payment", $"Payment succeeded for reservation {_reservation.ReservationNumber}");
+                    DatabaseService.Log("payment",
+                        $"Payment succeeded for reservation {_reservation.ReservationNumber}");
 
-                    MessageBox.Show("決済が完了しました！", "決済完了",
+                    MessageBox.Show(
+                        LanguageService.T("msg_pay_ok"),
+                        LanguageService.T("msg_pay_ok_title"),
                         MessageBoxButton.OK, MessageBoxImage.Information);
 
                     // 領収書発行確認
                     var receiptResult = MessageBox.Show(
-                        "領収書をメールで受け取りますか？",
-                        "領収書発行",
+                        LanguageService.T("msg_receipt_q"),
+                        LanguageService.T("msg_receipt_title"),
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Question);
 
                     if (receiptResult == MessageBoxResult.Yes)
                     {
-                        // 決済済みの予約情報を更新
-                        _reservation.PaymentStatus = "paid";
-                        _reservation.StripePaymentId = intentId;
+                        _reservation.PaymentStatus    = "paid";
+                        _reservation.StripePaymentId  = intentId;
                         var receiptDlg = new ReceiptEmailWindow(_reservation) { Owner = this };
                         receiptDlg.ShowDialog();
                     }
@@ -112,45 +130,58 @@ namespace AccommodationSystem.Views
                 }
                 else
                 {
-                    MessageBox.Show($"決済が完了しませんでした。ステータス: {status}", "エラー",
+                    MessageBox.Show(
+                        LanguageService.T("msg_pay_fail_prefix") + status,
+                        LanguageService.T("err_title"),
                         MessageBoxButton.OK, MessageBoxImage.Error);
                     PayButton.IsEnabled = true;
-                    PayButton.Content = "💳  カードで支払う";
+                    PayButton.Content   = LanguageService.T("btn_pay");
                 }
             }
             catch (StripeException ex)
             {
-                MessageBox.Show($"決済エラー: {ex.StripeError?.Message ?? ex.Message}", "決済エラー",
+                MessageBox.Show(
+                    LanguageService.T("stripe_pay_err_prefix") + (ex.StripeError?.Message ?? ex.Message),
+                    LanguageService.T("err_title"),
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 PayButton.IsEnabled = true;
-                PayButton.Content = "💳  カードで支払う";
+                PayButton.Content   = LanguageService.T("btn_pay");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"エラーが発生しました: {ex.Message}", "エラー",
+                MessageBox.Show(
+                    LanguageService.T("err_title") + ": " + ex.Message,
+                    LanguageService.T("err_title"),
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 PayButton.IsEnabled = true;
-                PayButton.Content = "💳  カードで支払う";
+                PayButton.Content   = LanguageService.T("btn_pay");
             }
         }
 
         private bool ValidateInput()
         {
-            if (string.IsNullOrWhiteSpace(CardNumberBox.Text) || CardNumberBox.Text.Replace(" ", "").Length < 13)
+            if (string.IsNullOrWhiteSpace(CardNumberBox.Text) ||
+                CardNumberBox.Text.Replace(" ", "").Length < 13)
             {
-                MessageBox.Show("有効なカード番号を入力してください。", "入力エラー",
+                MessageBox.Show(
+                    LanguageService.T("val_card_num"),
+                    LanguageService.T("val_err_title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
             if (string.IsNullOrWhiteSpace(ExpBox.Text) || !ExpBox.Text.Contains("/"))
             {
-                MessageBox.Show("有効期限を MM/YY 形式で入力してください。", "入力エラー",
+                MessageBox.Show(
+                    LanguageService.T("val_expiry"),
+                    LanguageService.T("val_err_title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
             if (string.IsNullOrWhiteSpace(CvcBox.Password) || CvcBox.Password.Length < 3)
             {
-                MessageBox.Show("セキュリティコードを入力してください。", "入力エラー",
+                MessageBox.Show(
+                    LanguageService.T("val_cvc"),
+                    LanguageService.T("val_err_title"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }

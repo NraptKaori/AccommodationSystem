@@ -1,7 +1,8 @@
 <Window x:Class="AccommodationSystem.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="宿泊税徴収管理・領収書発行システム"
+        xmlns:svc="clr-namespace:AccommodationSystem.Services"
+        Title="AccommodationSystem"
         WindowState="Maximized"
         MinWidth="900" MinHeight="650"
         Background="{StaticResource BackgroundBrush}">
@@ -14,13 +15,37 @@
         <!-- ヘッダー -->
         <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}">
             <Grid Margin="20,0">
-                <TextBlock Text="🏨  宿泊税徴収管理・領収書発行システム"
+                <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=AppTitle}"
                            Foreground="White" FontSize="18" FontWeight="Bold"
                            VerticalAlignment="Center"/>
-                <Button Content="⚙ 管理画面" Style="{StaticResource AccentButton}"
-                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Padding="16,8" FontSize="12"
-                        Click="AdminButton_Click"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+
+                    <!-- Language Toggle: EN ( ◯ ) JA -->
+                    <Border x:Name="LangToggleBorder"
+                            CornerRadius="14" Background="#1558A0"
+                            Padding="3" Margin="0,0,12,0"
+                            Cursor="Hand"
+                            MouseLeftButtonUp="LangToggle_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="EnPill" Width="40" Height="22" CornerRadius="11" Background="Transparent">
+                                <TextBlock x:Name="EnText" Text="EN"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           FontSize="11" FontWeight="Bold" Foreground="#7AACCE"/>
+                            </Border>
+                            <Border x:Name="JaPill" Width="40" Height="22" CornerRadius="11" Background="White">
+                                <TextBlock x:Name="JaText" Text="JA"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           FontSize="11" FontWeight="Bold" Foreground="#1558A0"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="⚙ 管理画面" Style="{StaticResource AccentButton}"
+                            VerticalAlignment="Center"
+                            Padding="16,8" FontSize="12"
+                            Click="AdminButton_Click"/>
+                </StackPanel>
             </Grid>
         </Border>
 

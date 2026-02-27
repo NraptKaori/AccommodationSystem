@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,6 +22,7 @@ namespace AccommodationSystem.Views
             LoadSettings();
             LoadReservations();
             InitYearCombo();
+            LoadTaxMaster();
         }
 
         private void InitMunicipalityCombo()
@@ -194,6 +196,142 @@ namespace AccommodationSystem.Views
                     new System.Diagnostics.ProcessStartInfo(saveDlg.FileName) { UseShellExecute = true });
         }
 
+        // ---- 宿泊税マスタ ----
+
+        /// <summary>DataGrid バインディング用ビューモデル行</summary>
+        public class TaxRateRow
+        {
+            public int Id { get; set; }
+            public string Municipality { get; set; } = "";
+            public int FromAmount { get; set; }
+            public string ToAmountStr { get; set; } = "";  // 空欄 = 上限なし
+            public int TaxAmount { get; set; }
+        }
+
+        private void LoadTaxMaster()
+        {
+            var rates = DatabaseService.GetTaxRates();
+            var rows = new ObservableCollection<TaxRateRow>();
+            foreach (var r in rates)
+                rows.Add(new TaxRateRow
+                {
+                    Id = r.Id,
+                    Municipality = r.Municipality,
+                    FromAmount = r.FromAmount,
+                    ToAmountStr = r.ToAmount.HasValue ? r.ToAmount.Value.ToString() : "",
+                    TaxAmount = r.TaxAmount,
+                });
+            TaxMasterGrid.ItemsSource = rows;
+        }
+
+        private void AddTaxRateRow_Click(object sender, RoutedEventArgs e)
+        {
+            if (TaxMasterGrid.ItemsSource is ObservableCollection<TaxRateRow> rows)
+                rows.Add(new TaxRateRow { Municipality = "", FromAmount = 0, ToAmountStr = "", TaxAmount = 0 });
+        }
+
+        private void DeleteTaxRateRow_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(TaxMasterGrid.ItemsSource is ObservableCollection<TaxRateRow> rows) ||
+                !(TaxMasterGrid.SelectedItem is TaxRateRow selected))
+            {
+                MessageBox.Show("削除する行を選択してください。", "確認",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            rows.Remove(selected);
+        }
+
+        private void ResetTaxRates_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show(
+                "宿泊税マスタをデフォルト値に戻します。現在の設定は上書きされます。よろしいですか？",
+                "デフォルトに戻す",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+
+            DatabaseService.ResetTaxRatesToDefaults();
+            LoadTaxMaster();
+            RefreshMunicipalityCombo();
+            MessageBox.Show("宿泊税マスタをデフォルト値に戻しました。", "完了",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void SaveTaxRatesButton_Click(object sender, RoutedEventArgs e)
+        {
+            // DataGrid の編集中セルをコミット
+            TaxMasterGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+
+            if (!(TaxMasterGrid.ItemsSource is ObservableCollection<TaxRateRow> rows)) return;
+
+            var rates = new List<TaxRate>();
+            var errors = new List<string>();
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var row = rows[i];
+                if (string.IsNullOrWhiteSpace(row.Municipality))
+                {
+                    errors.Add($"行{i + 1}: 市区町村が空です");
+                    continue;
+                }
+
+                int? toAmount = null;
+                if (!string.IsNullOrWhiteSpace(row.ToAmountStr))
+                {
+                    if (!int.TryParse(row.ToAmountStr.Replace(",", ""), out var ta) || ta < 0)
+                    {
+                        errors.Add($"行{i + 1} ({row.Municipality}): 上限金額が正しくありません");
+                        continue;
+                    }
+                    toAmount = ta;
+                }
+
+                rates.Add(new TaxRate
+                {
+                    Municipality = row.Municipality.Trim(),
+                    FromAmount = row.FromAmount,
+                    ToAmount = toAmount,
+                    TaxAmount = row.TaxAmount,
+                });
+            }
+
+            if (errors.Count > 0)
+            {
+                MessageBox.Show("以下のエラーを修正してください：\n\n" + string.Join("\n", errors),
+                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DatabaseService.SaveTaxRates(rates);
+            LoadTaxMaster();
+            RefreshMunicipalityCombo();
+            DatabaseService.Log("tax_master_updated", $"Tax master updated: {rates.Count} entries");
+            MessageBox.Show("宿泊税マスタを保存しました。", "完了",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        /// <summary>市区町村コンボを再構築し、以前の選択を復元する</summary>
+        private void RefreshMunicipalityCombo()
+        {
+            var current = (MunicipalityCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()
+                          ?? DatabaseService.GetSettings().Municipality;
+            MunicipalityCombo.Items.Clear();
+            InitMunicipalityCombo();
+
+            for (int i = 0; i < MunicipalityCombo.Items.Count; i++)
+            {
+                if ((MunicipalityCombo.Items[i] as ComboBoxItem)?.Content?.ToString() == current)
+                {
+                    MunicipalityCombo.SelectedIndex = i;
+                    return;
+                }
+            }
+            if (MunicipalityCombo.Items.Count > 0)
+                MunicipalityCombo.SelectedIndex = 0;
+        }
+
         // ---- 設定 ----
 
         private void LoadSettings()
@@ -219,7 +357,6 @@ namespace AccommodationSystem.Views
                 }
             }
             if (MunicipalityCombo.SelectedIndex < 0) MunicipalityCombo.SelectedIndex = 0;
-
         }
 
         private void SaveSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -281,6 +418,30 @@ namespace AccommodationSystem.Views
             {
                 MessageBox.Show("保存エラー: " + ex.Message, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        // ---- データ初期化 ----
+
+        private void ClearAllDataButton_Click(object sender, RoutedEventArgs e)
+        {
+            var res1 = MessageBox.Show(
+                "全ての予約データ・領収書・ログを削除します。\n施設設定と宿泊税マスタは保持されます。\n\nよろしいですか？",
+                "予約データの初期化",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (res1 != MessageBoxResult.Yes) return;
+
+            var res2 = MessageBox.Show(
+                "削除したデータは復元できません。\n本当に削除しますか？",
+                "最終確認",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (res2 != MessageBoxResult.Yes) return;
+
+            DatabaseService.ClearAllReservations();
+            LoadReservations();
+            MessageBox.Show("全予約データを削除しました。", "完了",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // ---- バックアップ ----

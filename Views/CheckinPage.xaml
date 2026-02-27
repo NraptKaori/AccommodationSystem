@@ -1,6 +1,7 @@
 <Page x:Class="AccommodationSystem.Views.CheckinPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:svc="clr-namespace:AccommodationSystem.Services"
       Background="{StaticResource BackgroundBrush}">
     <Grid>
         <Grid.RowDefinitions>
@@ -11,9 +12,10 @@
         <!-- 検索エリア -->
         <Border Grid.Row="0" Style="{StaticResource CardBorder}" Margin="40,30,40,16">
             <StackPanel>
-                <TextBlock Text="予約検索" FontSize="20" FontWeight="Bold"
+                <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SearchTitle}"
+                           FontSize="20" FontWeight="Bold"
                            Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,16"/>
-                <TextBlock Text="予約番号または宿泊者名（英字）を入力してください"
+                <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SearchLabel}"
                            Style="{StaticResource FieldLabel}" Margin="0,0,0,8"/>
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -23,8 +25,10 @@
                     <TextBox x:Name="SearchBox" Grid.Column="0" Margin="0,0,12,0"
                              FontSize="16" Padding="12,10"
                              KeyDown="SearchBox_KeyDown"
-                             Style="{StaticResource PlaceholderTextBox}" Tag="例: ABC12345 または Yamada"/>
-                    <Button Grid.Column="1" Content="検 索"
+                             Style="{StaticResource PlaceholderTextBox}"
+                             Tag="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SearchPlaceholder}"/>
+                    <Button Grid.Column="1"
+                            Content="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SearchBtn}"
                             Style="{StaticResource PrimaryButton}"
                             Click="SearchButton_Click"/>
                 </Grid>
@@ -37,12 +41,15 @@
                 <!-- 初期メッセージ -->
                 <StackPanel x:Name="WelcomePanel" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="🏨" FontSize="64" HorizontalAlignment="Center"/>
-                    <TextBlock Text="ようこそ" FontSize="28" FontWeight="Bold"
+                    <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=WelcomeTitle}"
+                               FontSize="28" FontWeight="Bold"
                                Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center"
                                Margin="0,16,0,8"/>
-                    <TextBlock Text="上の検索欄に予約番号または宿泊者名を入力して" HorizontalAlignment="Center"
+                    <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=WelcomeDesc1}"
+                               HorizontalAlignment="Center"
                                FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBlock Text="「検索」ボタンを押してください" HorizontalAlignment="Center"
+                    <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=WelcomeDesc2}"
+                               HorizontalAlignment="Center"
                                FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
                 </StackPanel>
 
@@ -86,32 +93,44 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
+
+                                <!-- 宿泊者名 + 予約詳細 -->
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}">
+                                    <TextBlock FontSize="16" FontWeight="Bold"
+                                               Foreground="{StaticResource TextPrimaryBrush}">
                                         <Run Text="{Binding GuestName}"/>
                                     </TextBlock>
-                                    <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0">
-                                        <Run Text="予約番号: "/>
+                                    <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="0,2,0,0">
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemResNum}"/>
                                         <Run Text="{Binding ReservationNumber}"/>
                                         <Run Text="  "/>
-                                        <Run Text="{Binding CheckinDate, StringFormat=チェックイン: \{0:yyyy/MM/dd\}}"/>
-                                        <Run Text=" 〜 "/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemCheckin}"/>
+                                        <Run Text="{Binding CheckinDate, StringFormat=\{0:yyyy/MM/dd\}}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemDash}"/>
                                         <Run Text="{Binding CheckoutDate, StringFormat=\{0:yyyy/MM/dd\}}"/>
                                         <Run Text="  "/>
-                                        <Run Text="{Binding NumPersons, StringFormat=\{0\}名}"/>
+                                        <Run Text="{Binding NumPersons}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SuffixPersons}"/>
                                         <Run Text=" / "/>
-                                        <Run Text="{Binding NumNights, StringFormat=\{0\}泊}"/>
+                                        <Run Text="{Binding NumNights}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SuffixNights}"/>
                                     </TextBlock>
                                 </StackPanel>
+
+                                <!-- 宿泊税金額 -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="20,0">
                                     <TextBlock Text="{Binding AccommodationTax, StringFormat=\{0:¥#\,##0\}}"
                                                FontSize="18" FontWeight="Bold"
                                                Foreground="{StaticResource PrimaryBrush}"
                                                HorizontalAlignment="Right"/>
-                                    <TextBlock Text="宿泊税" FontSize="10"
+                                    <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemTaxLbl}"
+                                               FontSize="10"
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                HorizontalAlignment="Right"/>
                                 </StackPanel>
+
+                                <!-- 支払状況バッジ -->
                                 <Border Grid.Column="2" CornerRadius="4" Padding="10,4" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
@@ -125,15 +144,19 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <TextBlock Text="{Binding PaymentStatusDisplay}" FontSize="12" FontWeight="Bold">
+                                    <!-- Text driven by LocalizationProxy so it updates on language toggle -->
+                                    <TextBlock FontSize="12" FontWeight="Bold">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
+                                                <!-- default = unpaid -->
+                                                <Setter Property="Text"
+                                                        Value="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=StatusUnpaid}"/>
+                                                <Setter Property="Foreground" Value="#92400E"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                                        <Setter Property="Text"
+                                                                Value="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=StatusPaid}"/>
                                                         <Setter Property="Foreground" Value="#065F46"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsPaid}" Value="False">
-                                                        <Setter Property="Foreground" Value="#92400E"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -149,7 +172,8 @@
                 <StackPanel x:Name="NoResultPanel" Visibility="Collapsed"
                             VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="🔍" FontSize="48" HorizontalAlignment="Center"/>
-                    <TextBlock Text="予約が見つかりませんでした" FontSize="18" FontWeight="Bold"
+                    <TextBlock Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=NoResult}"
+                               FontSize="18" FontWeight="Bold"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                HorizontalAlignment="Center" Margin="0,16,0,0"/>
                 </StackPanel>

@@ -209,7 +209,61 @@
                 </Grid>
             </TabItem>
 
-            <!-- ③ システム設定 -->
+            <!-- ③ 宿泊税マスタ -->
+            <TabItem Header="宿泊税マスタ">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 説明 -->
+                    <Border Grid.Row="0" Style="{StaticResource CardBorder}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="宿泊税マスタ" FontSize="15" FontWeight="Bold"
+                                       Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,6"/>
+                            <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                                       Text="市区町村ごとの宿泊税率（北海道税＋市区町村税の合計）を管理します。「上限（円以下）」を空欄にすると上限なしになります。行を選択して編集できます。"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 操作ボタン -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="＋ 行を追加" Style="{StaticResource AccentButton}"
+                                Padding="14,7" Click="AddTaxRateRow_Click"/>
+                        <Button Content="－ 選択行を削除" Style="{StaticResource DangerButton}"
+                                Padding="14,7" Margin="8,0,0,0" Click="DeleteTaxRateRow_Click"/>
+                        <Button Content="↩ デフォルトに戻す"
+                                Padding="14,7" Margin="8,0,0,0" Click="ResetTaxRates_Click"/>
+                    </StackPanel>
+
+                    <!-- DataGrid -->
+                    <DataGrid Grid.Row="2" x:Name="TaxMasterGrid"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              AlternatingRowBackground="#F7FAFC" RowBackground="White"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                              BorderThickness="1" BorderBrush="#E2E8F0"
+                              SelectionUnit="FullRow">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="市区町村" Binding="{Binding Municipality}" Width="*" MinWidth="100"/>
+                            <DataGridTextColumn Header="下限（円以上）" Binding="{Binding FromAmount}" Width="130"/>
+                            <DataGridTextColumn Header="上限（円以下）　空欄=上限なし" Binding="{Binding ToAmountStr}" Width="200"/>
+                            <DataGridTextColumn Header="宿泊税（円/人/泊）" Binding="{Binding TaxAmount}" Width="150"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- 保存ボタン -->
+                    <Button Grid.Row="3" Content="💾  税率を保存" Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Right" Padding="24,12" Margin="0,8,0,0"
+                            Click="SaveTaxRatesButton_Click"/>
+                </Grid>
+            </TabItem>
+
+            <!-- ④ システム設定 -->
             <TabItem Header="システム設定">
                 <ScrollViewer Margin="8" VerticalScrollBarVisibility="Auto">
                     <StackPanel MaxWidth="640">
@@ -310,6 +364,20 @@
 
                         <Button Content="💾  今すぐバックアップ" Style="{StaticResource SuccessButton}"
                                 Click="BackupButton_Click"/>
+
+                        <Border Background="#FFF5F5" CornerRadius="6" Padding="16" Margin="0,24,0,0">
+                            <StackPanel>
+                                <TextBlock Text="⚠  予約データの初期化" FontSize="14" FontWeight="Bold"
+                                           Foreground="{StaticResource DangerBrush}" Margin="0,0,0,8"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="12"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"
+                                           Text="全ての予約・領収書・ログを削除します。施設設定・宿泊税マスタは保持されます。配布前のテストデータ削除にご利用ください。"/>
+                                <Button Content="🗑  全予約データを削除する"
+                                        Style="{StaticResource DangerButton}"
+                                        HorizontalAlignment="Left" Padding="16,8"
+                                        Click="ClearAllDataButton_Click"/>
+                            </StackPanel>
+                        </Border>
 
                         <Border Background="#F0FFF4" CornerRadius="6" Padding="12" Margin="0,16,0,0">
                             <TextBlock x:Name="BackupStatusText" TextWrapping="Wrap" FontSize="12"
