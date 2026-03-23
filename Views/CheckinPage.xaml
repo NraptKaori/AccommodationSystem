@@ -102,19 +102,19 @@
                                     </TextBlock>
                                     <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
                                                Margin="0,2,0,0">
-                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemResNum}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemResNum, Mode=OneWay}"/>
                                         <Run Text="{Binding ReservationNumber}"/>
                                         <Run Text="  "/>
-                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemCheckin}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemCheckin, Mode=OneWay}"/>
                                         <Run Text="{Binding CheckinDate, StringFormat=\{0:yyyy/MM/dd\}}"/>
-                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemDash}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=ItemDash, Mode=OneWay}"/>
                                         <Run Text="{Binding CheckoutDate, StringFormat=\{0:yyyy/MM/dd\}}"/>
                                         <Run Text="  "/>
                                         <Run Text="{Binding NumPersons}"/>
-                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SuffixPersons}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SuffixPersons, Mode=OneWay}"/>
                                         <Run Text=" / "/>
                                         <Run Text="{Binding NumNights}"/>
-                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SuffixNights}"/>
+                                        <Run Text="{Binding Source={x:Static svc:LocalizationProxy.Instance}, Path=SuffixNights, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
 

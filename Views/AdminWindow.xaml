@@ -296,7 +296,10 @@
                                 <TextBlock Text="Stripe Secret Key *" Style="{StaticResource FieldLabel}"/>
                                 <TextBox x:Name="StripeKeyBox" Style="{StaticResource PlaceholderTextBox}"
                                          Tag="sk_live_..." Margin="0,0,0,4"/>
-                                <TextBlock Text="※ 暗号化して保存されます" FontSize="11"
+                                <TextBlock Text="Stripe Publishable Key *" Style="{StaticResource FieldLabel}" Margin="0,8,0,0"/>
+                                <TextBox x:Name="StripePublishableKeyBox" Style="{StaticResource PlaceholderTextBox}"
+                                         Tag="pk_live_..." Margin="0,0,0,4"/>
+                                <TextBlock Text="※ 両キーとも暗号化して保存されます" FontSize="11"
                                            Foreground="{StaticResource TextSecondaryBrush}"/>
                             </StackPanel>
                         </Border>

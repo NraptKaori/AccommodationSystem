@@ -342,6 +342,7 @@ namespace AccommodationSystem.Views
             BusinessInfoBox.Text = s.BusinessInfo;
             TaxNumberBox.Text = s.TaxNumber;
             StripeKeyBox.Text = s.StripeApiKey;
+            StripePublishableKeyBox.Text = s.StripePublishableKey;
             SmtpHostBox.Text = s.SmtpHost;
             SmtpPortBox.Text = s.SmtpPort.ToString();
             SmtpUserBox.Text = s.SmtpUser;
@@ -395,6 +396,7 @@ namespace AccommodationSystem.Views
                 DatabaseService.SaveSetting("tax_number", TaxNumberBox.Text.Trim());
                 DatabaseService.SaveSetting("municipality", municipality);
                 DatabaseService.SaveSetting("stripe_api_key", StripeKeyBox.Text.Trim());
+                DatabaseService.SaveSetting("stripe_publishable_key", StripePublishableKeyBox.Text.Trim());
                 DatabaseService.SaveSetting("smtp_host", SmtpHostBox.Text.Trim());
                 DatabaseService.SaveSetting("smtp_port", SmtpPortBox.Text.Trim());
                 DatabaseService.SaveSetting("smtp_user", SmtpUserBox.Text.Trim());

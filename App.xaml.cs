@@ -9,6 +9,15 @@ namespace AccommodationSystem
         {
             base.OnStartup(e);
             DatabaseService.Initialize();
+
+            if (DatabaseService.ApplyPasswordResetIfRequested())
+            {
+                MessageBox.Show(
+                    "管理者パスワードを初期値にリセットしました。\n\nパスワード: admin1234\n\nログイン後すぐに新しいパスワードに変更してください。",
+                    "パスワードリセット完了",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
         }
     }
 }

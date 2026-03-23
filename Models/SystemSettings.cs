@@ -5,6 +5,7 @@ namespace AccommodationSystem.Models
         public string PropertyName { get; set; } = "";
         public string PropertyAddress { get; set; } = "";
         public string StripeApiKey { get; set; } = "";
+        public string StripePublishableKey { get; set; } = "";
         public string SmtpHost { get; set; } = "";
         public int SmtpPort { get; set; } = 587;
         public string SmtpUser { get; set; } = "";

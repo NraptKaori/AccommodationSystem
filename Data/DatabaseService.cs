@@ -18,7 +18,7 @@ namespace AccommodationSystem.Data
         // 暗号化が必要な設定キー
         private static readonly HashSet<string> EncryptedKeys = new HashSet<string>
         {
-            "stripe_api_key", "smtp_password"
+            "stripe_api_key", "stripe_publishable_key", "smtp_password"
         };
 
         private static string DictGet(Dictionary<string, string> d, string key, string def)
@@ -556,6 +556,7 @@ namespace AccommodationSystem.Data
                 PropertyName = DictGet(dict, "property_name", ""),
                 PropertyAddress = DictGet(dict, "property_address", ""),
                 StripeApiKey = DictGet(dict, "stripe_api_key", ""),
+                StripePublishableKey = DictGet(dict, "stripe_publishable_key", ""),
                 SmtpHost = DictGet(dict, "smtp_host", ""),
                 SmtpPort = int.Parse(DictGet(dict, "smtp_port", "587")),
                 SmtpUser = DictGet(dict, "smtp_user", ""),
@@ -649,6 +650,27 @@ namespace AccommodationSystem.Data
                     tx.Commit();
                 }
             }
+        }
+
+        // ---- Password Reset ----
+
+        /// <summary>
+        /// DbFolder に RESET_PASSWORD.txt が存在する場合、管理者パスワードを
+        /// "admin1234" にリセットしてファイルを削除する。
+        /// 戻り値: リセットを実行した場合 true。
+        /// </summary>
+        public static bool ApplyPasswordResetIfRequested()
+        {
+            var resetFile = Path.Combine(DbFolder, "RESET_PASSWORD.txt");
+            if (!File.Exists(resetFile)) return false;
+
+            var hash = BCrypt.Net.BCrypt.HashPassword("admin1234");
+            SaveSetting("admin_password_hash", hash);
+            SaveSetting("login_lock_until", "");   // ロックも解除
+
+            File.Delete(resetFile);
+            Log("admin", "Password reset via RESET_PASSWORD.txt");
+            return true;
         }
 
         // ---- Backup ----

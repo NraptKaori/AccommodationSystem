@@ -78,20 +78,22 @@ namespace AccommodationSystem.Views
                 }
                 else
                 {
-                    var expParts  = ExpBox.Text.Split('/');
+                    // Publishable Key でカードをトークン化（生データはStripeサーバーのみ）
+                    var expParts = ExpBox.Text.Split('/');
+                    var token    = await StripeService.CreateCardTokenAsync(
+                        CardNumberBox.Text.Replace(" ", ""),
+                        expParts[0].Trim(),
+                        "20" + expParts[1].Trim(),
+                        CvcBox.Password,
+                        CardNameBox.Text.Trim()
+                    );
+                    // トークンから PaymentMethod を作成
                     var pmOptions = new PaymentMethodCreateOptions
                     {
                         Type = "card",
-                        Card = new PaymentMethodCardOptions
-                        {
-                            Number   = CardNumberBox.Text.Replace(" ", ""),
-                            ExpMonth = long.Parse(expParts[0]),
-                            ExpYear  = long.Parse("20" + expParts[1]),
-                            Cvc      = CvcBox.Password,
-                        },
+                        Card = new PaymentMethodCardOptions { Token = token },
                     };
-                    var pmService   = new PaymentMethodService();
-                    var pm          = await pmService.CreateAsync(pmOptions);
+                    var pm          = await new PaymentMethodService().CreateAsync(pmOptions);
                     paymentMethodId = pm.Id;
                 }
 
